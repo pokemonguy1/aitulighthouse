@@ -106,18 +106,30 @@ async def send_welcome(message: types.Message, state: FSMContext):
 
 @dp.message(Registration.waiting_for_group, F.text)
 async def process_group_number(message: types.Message, state: FSMContext):
-    group_number = message.text.strip().upper()
-    if group_number in timetable_data:
+    user_input = message.text.strip()
+    user_input_upper = user_input.upper() # Use this for comparison
+    matched_group_key = None
+
+    # Iterate through the actual keys in your timetable data
+    for key in timetable_data.keys():
+        # Compare the uppercase version of the user input with the uppercase version of the key
+        if key.upper() == user_input_upper:
+            matched_group_key = key  # Store the original key with correct casing
+            break # Found a match, no need to check further
+
+    if matched_group_key:
         user_id = message.from_user.id
-        user_groups[user_id] = group_number
+        # Store the correctly cased key from the timetable data
+        user_groups[user_id] = matched_group_key
         save_user_data(user_groups)
-        await message.reply(f"Great! Your group '{group_number}' is registered. "
+        await message.reply(f"Great! Your group '{matched_group_key}' is registered. " # Use matched_group_key here
                           f"I will notify you {NOTIFICATION_OFFSET_MINUTES} minutes before your lessons.")
-        logging.info(f"User {user_id} registered group: {group_number}")
+        logging.info(f"User {user_id} registered group: {matched_group_key}") # Log the correct key
         await state.clear()
     else:
         await message.reply("Sorry, I couldn't find that group number in the timetable. "
-                          "Please check the format (e.g., EE-2401) and try again.")
+                          "Please check the format (e.g., EE-2401 or IoT-2401) and try again.")
+        logging.warning(f"User {message.from_user.id} entered group '{user_input}', which was not found.")
 
 # --- Admin Broadcast Command ---
 @dp.message(Command("broadcast"))
